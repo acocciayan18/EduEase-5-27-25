@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:layout_marginTop="8dp"
+    android:background="@drawable/edittext_gradient_border">
+
+    <!-- Question Label -->
+    <TextView
+        android:id="@+id/question_number"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Question:"
+        android:fontFamily="@font/poppinsasemibold"
+        android:textColor="@color/black"
+        android:textSize="17sp" />
+
+    <!-- Question Field -->
+    <EditText
+        android:id="@+id/question_field"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter question here"
+        android:padding="8dp"
+        android:fontFamily="@font/poppinsregular"
+        android:textColor="@color/black"
+        android:textSize="17sp"
+        android:textColorHint="@color/dark_gray" />
+
+    <!-- Answer Label -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Answer:"
+        android:fontFamily="@font/poppinsasemibold"
+        android:textColor="@color/black"
+        android:textSize="17sp"
+        android:paddingTop="8dp" />
+
+    <!-- Answer and Delete Button -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <EditText
+            android:id="@+id/answer_field"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Enter answer here"
+            android:padding="8dp"
+            android:fontFamily="@font/poppinsregular"
+            android:textColor="@color/black"
+            android:textSize="17sp"
+            android:textColorHint="@color/dark_gray"/>
+
+        <ImageButton
+            android:id="@+id/add_qa"
+            android:layout_width="32dp"
+            android:padding="7dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center"
+            android:background="@android:color/transparent"
+            android:contentDescription="Add"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ayan_quiz_plus_icon" />
+
+        <ImageButton
+            android:id="@+id/delete_qa"
+            android:padding="7dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="4dp"
+            android:background="@android:color/transparent"
+            android:contentDescription="Delete"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ayan_quiz_delete_icon" />
+    </LinearLayout>
+</LinearLayout>

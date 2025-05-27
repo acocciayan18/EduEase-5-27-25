@@ -1,0 +1,27 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Outer glow effect from top -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="270"
+            android:startColor="#FFFFCC"
+            android:centerColor="#ec6d52"
+            android:endColor="#ec6d52" />
+            <corners android:radius="20dp" />
+        </shape>
+    </item>
+
+    <!-- Subtle inner shine (highlight) -->
+    <item android:left="2dp" android:top="2dp" android:right="2dp" android:bottom="2dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="270"
+                android:startColor="#55FFFFFF"
+            android:endColor="#00FFFFFF" />
+            <corners android:radius="18dp" />
+        </shape>
+    </item>
+</layer-list>

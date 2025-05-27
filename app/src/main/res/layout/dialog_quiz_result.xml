@@ -1,0 +1,51 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/ayan_bg3"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:id="@+id/result_message"
+            android:text="QUIZ COMPLETED!"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/white"
+            android:fontFamily="@font/poppinsbold"
+            android:textSize="22sp"
+            android:layout_gravity="center_horizontal"
+            android:paddingBottom="24dp" />
+
+        <TextView
+            android:id="@+id/score_message"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            android:fontFamily="@font/poppinsmedium"
+            android:layout_gravity="center_horizontal"
+            android:paddingBottom="24dp" />
+
+        <LinearLayout
+            android:id="@+id/qa_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/finish_button"
+            android:layout_width="170dp"
+            android:layout_height="55dp"
+            android:text="FINISH"
+            android:layout_gravity="center_horizontal"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:background="@drawable/ayan_finish_button_bg"
+            android:onClick="finishQuiz"
+            android:layout_marginTop="32dp" />
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="100dp"
+    android:layout_height="100dp"
+    android:elevation="12dp"
+    android:layout_margin="8dp">
+
+    <!-- Main Box with slight 3D tilt -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@drawable/box_3d_background"
+        android:padding="12dp"
+        android:gravity="center">
+
+        <!-- Bonus points number -->
+        <TextView
+            android:id="@+id/bonus_points"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:gravity="center"
+            android:text="55"
+            android:layout_marginEnd="16dp"
+            android:textColor="@android:color/white"
+            android:textSize="36sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+</FrameLayout>

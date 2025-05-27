@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "882141634417",
+    "firebase_url": "https://edu-ease-ni-ayan-default-rtdb.firebaseio.com",
+    "project_id": "edu-ease-ni-ayan",
+    "storage_bucket": "edu-ease-ni-ayan.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:882141634417:android:ac69b51d83d01def3460d0",
+        "android_client_info": {
+          "package_name": "com.example.eduease"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "882141634417-e4on77vc4bv9i072te8glhu1srjg1vbb.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.eduease",
+            "certificate_hash": "edd7db3a12a416d125a9b9b9f014cb08c13af570"
+          }
+        },
+        {
+          "client_id": "882141634417-rvajdbpvkjkrsdegtq50bhng2khar63t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlECTZf28SbEc4xHsz7JnH99YtTw6T58I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "882141634417-rvajdbpvkjkrsdegtq50bhng2khar63t.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,69 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/result_root"
+    android:layout_width="match_parent"
+    android:background="@drawable/ayan_bg3"
+    android:layout_height="match_parent">
+
+    <!-- ConfettiView must be behind or in a FrameLayout for layering -->
+    <com.example.eduease.ConfettiView
+        android:id="@+id/confettiView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="visible" />
+
+    <!-- Other UI elements on top -->
+    <LinearLayout
+        android:orientation="vertical"
+        android:gravity="center"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <TextView
+            android:id="@+id/result_message"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="QUIZ COMPLETED!"
+            android:fontFamily="@font/poppinsbold"
+            android:gravity="center"
+            android:textColor="@color/white"
+            android:textSize="22sp"
+            android:paddingBottom="10dp" />
+
+        <TextView
+            android:id="@+id/eme"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Congratulations you have answered all bonus questions!"
+            android:fontFamily="@font/poppinsmedium"
+            android:gravity="center"
+            android:layout_marginEnd="30dp"
+            android:layout_marginStart="30dp"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            android:paddingBottom="25dp" />
+
+        <TextView
+            android:id="@+id/score_message"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Total Points: "
+            android:fontFamily="@font/poppinsmedium"
+            android:gravity="center"
+            android:textColor="@color/white"
+            android:textSize="20sp"
+            android:paddingBottom="45dp" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/finish_button"
+            android:layout_width="170dp"
+            android:layout_height="55dp"
+            android:background="@drawable/ayan_finish_button_bg"
+            android:fontFamily="@font/poppinsbold"
+            android:text="FINISH"
+            android:textColor="#ffffff"
+            android:textSize="19sp"
+            android:onClick="finishQuiz"/>
+    </LinearLayout>
+
+</FrameLayout>
+
