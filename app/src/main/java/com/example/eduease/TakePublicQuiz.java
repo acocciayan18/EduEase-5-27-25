@@ -1,6 +1,7 @@
 package com.example.eduease;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
@@ -9,12 +10,13 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -27,15 +29,14 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class TakePublicQuiz extends AppCompatActivity {
+public class TakePublicQuiz extends BaseActivity {
 
     private LinearLayout qaContainer;
     private FirebaseApp secondaryApp;
-    private List<Map<String, String>> questionsList;
+    private List<Map<String, Object>> questionsList = new ArrayList<>();
     private String quizId, typeQuiz;
 
     @Override
@@ -65,6 +66,7 @@ public class TakePublicQuiz extends AppCompatActivity {
         submitButton.setOnClickListener(v -> handleSubmit());
     }
 
+
     private void loadFromRealtimeDatabase(String typeQuiz, String quizId) {
         try {
             secondaryApp = FirebaseApp.getInstance("Secondary");
@@ -83,76 +85,153 @@ public class TakePublicQuiz extends AppCompatActivity {
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot snapshot) {
-                        if (snapshot.exists()) {
-                            String title = snapshot.child("title").getValue(String.class);
-                            if (title != null) {
-                                TextView quizTitle = findViewById(R.id.quiz_title);
-                                quizTitle.setText(title);
-                            }
-
-                            qaContainer.removeAllViews();
-                            questionsList = new ArrayList<>();
-                            int i = 1;
-                            while (true) {
-                                DataSnapshot questionSnap = snapshot.child("Question_" + i);
-                                if (!questionSnap.exists()) break;
-
-                                String question = questionSnap.child("question").getValue(String.class);
-                                String answer = questionSnap.child("answer").getValue(String.class);
-                                if (question != null && answer != null) {
-                                    Map<String, String> qa = Map.of("question", question, "answer", answer);
-                                    questionsList.add(qa);
-                                }
-                                i++;
-                            }
-
-                            Collections.shuffle(questionsList);
-                            int number = 1;
-                            for (Map<String, String> qa : questionsList) {
-                                addQuestionBlock(number++, qa.get("question"));
-                            }
-
-                        } else {
+                        if (!snapshot.exists()) {
                             Toast.makeText(TakePublicQuiz.this, "Quiz not found in database.", Toast.LENGTH_SHORT).show();
                             finish();
+                            return;
                         }
+
+                        // Set the title
+                        String title = snapshot.child("title").getValue(String.class);
+                        if (title != null) {
+                            TextView quizTitle = findViewById(R.id.quiz_title);
+                            quizTitle.setText(title);
+                        }
+
+                        qaContainer.removeAllViews();
+                        int questionNumber = 1;
+
+                        // Load multiple choice questions
+                        DataSnapshot mcSnapshot = snapshot.child("multiple_choice");
+                        for (DataSnapshot item : mcSnapshot.getChildren()) {
+                            Object raw = item.getValue();
+                            if (raw instanceof Map) {
+                                addQuestionBlock(questionNumber++, (Map<String, Object>) raw, "multiple_choice");
+                            }
+                        }
+
+                        // Load identification questions
+                        DataSnapshot idSnapshot = snapshot.child("identification");
+                        for (DataSnapshot item : idSnapshot.getChildren()) {
+                            Object raw = item.getValue();
+                            if (raw instanceof Map) {
+                                addQuestionBlock(questionNumber++, (Map<String, Object>) raw, "identification");
+                            }
+                        }
+
+                        // Load true/false questions
+                        DataSnapshot tfSnapshot = snapshot.child("true_or_false");
+                        for (DataSnapshot item : tfSnapshot.getChildren()) {
+                            Object raw = item.getValue();
+                            if (raw instanceof Map) {
+                                addQuestionBlock(questionNumber++, (Map<String, Object>) raw, "true_or_false");
+                            }
+                        }
+
+                        hideLoading(); // Hide loader once done
                     }
 
                     @Override
                     public void onCancelled(DatabaseError error) {
                         Toast.makeText(TakePublicQuiz.this, "DB Error: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+                        hideLoading(); // Also hide on error
                         finish();
                     }
                 });
     }
 
-    private void addQuestionBlock(int questionNumber, String question) {
+
+    private void addQuestionBlock(int questionNumber, Map<String, Object> questionData, String type) {
         LayoutInflater inflater = LayoutInflater.from(this);
         View qaBlock = inflater.inflate(R.layout.ayan_take_quiz_edittext, qaContainer, false);
 
         TextView questionNumberView = qaBlock.findViewById(R.id.question_number);
         EditText questionField = qaBlock.findViewById(R.id.question_field);
         EditText answerField = qaBlock.findViewById(R.id.answer_field);
+        RadioGroup choicesGroup = qaBlock.findViewById(R.id.choices_group);
+        RadioButton choiceA = qaBlock.findViewById(R.id.choice_a);
+        RadioButton choiceB = qaBlock.findViewById(R.id.choice_b);
+        RadioButton choiceC = qaBlock.findViewById(R.id.choice_c);
+        RadioButton choiceD = qaBlock.findViewById(R.id.choice_d);
 
         questionNumberView.setText("#" + questionNumber + " Question:");
-        questionField.setText(question);
+        questionField.setText((String) questionData.get("question"));
         questionField.setFocusable(false);
         questionField.setClickable(false);
         questionField.setFocusableInTouchMode(false);
         questionField.setBackground(null);
         questionField.setTextIsSelectable(false);
 
-        answerField.setHint("Enter your answer here");
-        qaBlock.setTag(questionNumber - 1);
+        switch (type) {
+            case "multiple_choice":
+                answerField.setVisibility(View.GONE);
+                choicesGroup.setVisibility(View.VISIBLE);
 
-        answerField.setOnFocusChangeListener((v, hasFocus) -> {
-            if (!hasFocus && !answerField.getText().toString().trim().isEmpty()) {
-                moveBlockToBottom(qaBlock);
-            }
-        });
+                choiceA.setVisibility(View.VISIBLE);
+                choiceB.setVisibility(View.VISIBLE);
+                choiceC.setVisibility(View.VISIBLE);
+                choiceD.setVisibility(View.VISIBLE);
 
+                List<String> choices = (List<String>) questionData.get("choices");
+
+                choiceA.setVisibility(View.GONE);
+                choiceB.setVisibility(View.GONE);
+                choiceC.setVisibility(View.GONE);
+                choiceD.setVisibility(View.GONE);
+
+                if (choices != null) {
+                    int size = Math.min(choices.size(), 4);
+                    if (size > 0) {
+                        choiceA.setText(choices.get(0));
+                        choiceA.setVisibility(View.VISIBLE);
+                    }
+                    if (size > 1) {
+                        choiceB.setText(choices.get(1));
+                        choiceB.setVisibility(View.VISIBLE);
+                    }
+                    if (size > 2) {
+                        choiceC.setText(choices.get(2));
+                        choiceC.setVisibility(View.VISIBLE);
+                    }
+                    if (size > 3) {
+                        choiceD.setText(choices.get(3));
+                        choiceD.setVisibility(View.VISIBLE);
+                    }
+                }
+
+                break;
+
+            case "true_or_false":
+                answerField.setVisibility(View.GONE);
+                choicesGroup.setVisibility(View.VISIBLE);
+
+                choiceA.setText("True");
+                choiceB.setText("False");
+
+                choiceC.setVisibility(View.GONE);
+                choiceD.setVisibility(View.GONE);
+                break;
+
+            case "identification":
+                answerField.setVisibility(View.VISIBLE);
+                choicesGroup.setVisibility(View.GONE);
+
+                answerField.setHint("Enter your answer here");
+                answerField.setOnFocusChangeListener((v, hasFocus) -> {
+                    if (!hasFocus && !answerField.getText().toString().trim().isEmpty()) {
+                        moveBlockToBottom(qaBlock);
+                    }
+                });
+                break;
+        }
+
+        questionData.put("type", type); // Store the type
+        questionsList.add(questionData); // For result processing
+
+        qaBlock.setTag(questionData); // Tagging for lookup
         qaContainer.addView(qaBlock);
     }
+
 
     private void moveBlockToBottom(View qaBlock) {
         qaContainer.removeView(qaBlock);
@@ -165,10 +244,25 @@ public class TakePublicQuiz extends AppCompatActivity {
 
         for (int i = 0; i < qaContainer.getChildCount(); i++) {
             View child = qaContainer.getChildAt(i);
+            Object tag = child.getTag();
+
+            if (!(tag instanceof Map)) continue;
+            Map<String, Object> questionData = (Map<String, Object>) tag;
+            String type = (String) questionData.get("type");
+
             EditText answerField = child.findViewById(R.id.answer_field);
-            if (answerField.getText().toString().trim().isEmpty()) {
-                allAnswered = false;
-                break;
+            RadioGroup choicesGroup = child.findViewById(R.id.choices_group);
+
+            if ("identification".equals(type)) {
+                if (answerField.getText().toString().trim().isEmpty()) {
+                    allAnswered = false;
+                    break;
+                }
+            } else if ("multiple_choice".equals(type) || "true_or_false".equals(type)) {
+                if (choicesGroup.getCheckedRadioButtonId() == -1) {
+                    allAnswered = false;
+                    break;
+                }
             }
         }
 
@@ -184,76 +278,51 @@ public class TakePublicQuiz extends AppCompatActivity {
         }
     }
 
-    @SuppressLint("SetTextI18n")
+
     private void calculateScore() {
-        int score = 0;
-        List<String> userAnswers = new ArrayList<>();
+        ArrayList<String> userAnswers = new ArrayList<>();
 
         for (int i = 0; i < qaContainer.getChildCount(); i++) {
             View child = qaContainer.getChildAt(i);
+            Object tag = child.getTag();
+
+            // Ensure tag is a valid map
+            if (!(tag instanceof Map)) continue;
+
+            Map<String, Object> questionData = (Map<String, Object>) tag;
+            String type = (String) questionData.get("type");
+            String userAnswer = "";
+
+            RadioGroup choicesGroup = child.findViewById(R.id.choices_group);
             EditText answerField = child.findViewById(R.id.answer_field);
-            userAnswers.add(answerField.getText().toString().trim());
-        }
 
-        qaContainer.removeAllViews(); // clear previous input blocks
-        LayoutInflater inflater = LayoutInflater.from(this);
-
-        for (int i = 0; i < questionsList.size(); i++) {
-            Map<String, String> questionData = questionsList.get(i);
-            String questionText = questionData.get("question");
-            String correctAnswer = questionData.get("answer").trim();
-            String userAnswer = i < userAnswers.size() ? userAnswers.get(i).trim() : "";
-
-            if (userAnswer.equalsIgnoreCase(correctAnswer)) {
-                score++;
+            if ("multiple_choice".equals(type) || "true_or_false".equals(type)) {
+                int selectedId = choicesGroup.getCheckedRadioButtonId();
+                if (selectedId != -1) {
+                    RadioButton selected = child.findViewById(selectedId);
+                    if (selected != null) {
+                        userAnswer = selected.getText().toString().trim();
+                    }
+                }
+            } else if ("identification".equals(type)) {
+                if (answerField.getVisibility() == View.VISIBLE) {
+                    userAnswer = answerField.getText().toString().trim();
+                }
             }
 
-            // Question TextView
-            TextView questionView = new TextView(this);
-            questionView.setText("Q: " + questionText);
-            questionView.setTextColor(getResources().getColor(R.color.white));
-            questionView.setTextSize(15);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                questionView.setTypeface(getResources().getFont(R.font.poppinsmedium));
-            }
-
-            // User Answer TextView
-            TextView userAnswerView = new TextView(this);
-            userAnswerView.setText("Your Answer: " + (userAnswer.isEmpty() ? "No Answer" : userAnswer));
-            userAnswerView.setTextColor(getResources().getColor(R.color.white));
-            userAnswerView.setTextSize(14);
-            userAnswerView.setPadding(0, 4, 0, 0);
-
-            // Correct Answer TextView
-            TextView correctAnswerView = new TextView(this);
-            correctAnswerView.setText("Correct Answer: " + correctAnswer);
-            correctAnswerView.setTextColor(getResources().getColor(R.color.white));
-            correctAnswerView.setTextSize(14);
-            correctAnswerView.setPadding(0, 0, 0, 8);
-
-            // Add all three views to the container
-            qaContainer.addView(questionView);
-            qaContainer.addView(userAnswerView);
-            qaContainer.addView(correctAnswerView);
+            userAnswers.add(userAnswer);
         }
 
-        int totalQuestions = questionsList.size();
-        float rawPercentage = (score / (float) totalQuestions) * 100;
-        float roundedPercentage = rawPercentage >= 75 ? (float) Math.floor(rawPercentage) : (float) Math.ceil(rawPercentage);
+        QuizDataHolder.setQuestionsList(questionsList);
+        QuizDataHolder.setUserAnswers(userAnswers);
 
-        TextView resultMessage = findViewById(R.id.result_message);
-        TextView scoreMessage = findViewById(R.id.score_message);
+        hideLoading();
 
-        resultMessage.setText("QUIZ COMPLETED!");
-        scoreMessage.setText("Your Score: " + score + "/" + totalQuestions + " (" + (int) roundedPercentage + "%)");
-
-        int soundResId = roundedPercentage >= 75 ? R.raw.pass : R.raw.fail;
-        MediaPlayer mediaPlayer = MediaPlayer.create(this, soundResId);
-        mediaPlayer.start();
-        mediaPlayer.setOnCompletionListener(MediaPlayer::release);
-
-        findViewById(R.id.finish_button).setVisibility(View.VISIBLE);
+        Intent intent = new Intent(TakePublicQuiz.this, QuizResult.class);
+        startActivity(intent);
+        finish();
     }
+
 
 
 

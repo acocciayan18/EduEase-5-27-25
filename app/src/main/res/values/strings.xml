@@ -42,5 +42,12 @@
 
     </string-array>
 
+    <string-array name="question_types">
+        <item>Identification</item>
+        <item>True or False</item>
+        <item>Multiple Choice</item>
+    </string-array>
+
+
 
 </resources>

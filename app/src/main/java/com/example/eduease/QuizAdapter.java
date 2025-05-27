@@ -53,7 +53,7 @@ public class QuizAdapter extends RecyclerView.Adapter<QuizAdapter.QuizViewHolder
                 Intent intent = new Intent(v.getContext(), TakeBonusFlash.class);
                 intent.putExtra("quizId", currentQuiz.getId());
                 v.getContext().startActivity(intent);
-            } else if ("randomquiz".equals(currentQuiz.getType())) {
+             } else if ("randomquiz".equals(currentQuiz.getType())) {
 
                 FirebaseApp secondaryApp = FirebaseApp.getInstance("Secondary");
                 FirebaseDatabase secondaryDatabase = FirebaseDatabase.getInstance(secondaryApp);
@@ -94,12 +94,46 @@ public class QuizAdapter extends RecyclerView.Adapter<QuizAdapter.QuizViewHolder
                 });
 
             } else if ("public".equals(currentQuiz.getTypeQuiz())) {
-                Intent intent = new Intent(v.getContext(), TakePublicQuiz.class);
-                intent.putExtra("quizId", currentQuiz.getId());
-                intent.putExtra("typeQuiz", "public");
-                v.getContext().startActivity(intent);
+                String currentUserId = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser().getUid();
 
-            } else {
+                List<CharSequence> options = new java.util.ArrayList<>();
+                List<Runnable> actions = new java.util.ArrayList<>();
+
+                if (currentUserId.equals(currentQuiz.getCreatorId())) {
+                    options.add("Edit");
+                    actions.add(() -> {
+                        Intent editIntent = new Intent(v.getContext(), CreateQuiz.class);
+                        editIntent.putExtra("QUIZ_ID", currentQuiz.getId());
+                        v.getContext().startActivity(editIntent);
+                    });
+
+                    options.add("Delete");
+                    actions.add(() -> {
+                        DatabaseReference quizRef = FirebaseDatabase.getInstance().getReference("public_quizzes").child(currentQuiz.getId());
+                        quizRef.removeValue().addOnSuccessListener(aVoid ->
+                                Toast.makeText(v.getContext(), "Quiz deleted", Toast.LENGTH_SHORT).show()
+                        ).addOnFailureListener(e ->
+                                Toast.makeText(v.getContext(), "Delete failed", Toast.LENGTH_SHORT).show()
+                        );
+                    });
+                }
+
+                options.add("Take Quiz");
+                actions.add(() -> {
+                    Intent intent = new Intent(v.getContext(), TakePublicQuiz.class);
+                    intent.putExtra("quizId", currentQuiz.getId());
+                    intent.putExtra("typeQuiz", "public");
+                    v.getContext().startActivity(intent);
+                });
+
+                AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext(), R.style.CustomAlertDialog);
+                builder.setTitle("Choose an option")
+                        .setItems(options.toArray(new CharSequence[0]), (dialog, which) -> actions.get(which).run())
+                        .show();
+
+
+
+        } else {
                 if (listener != null) {
                     listener.onQuizClick(currentQuiz);
                 }

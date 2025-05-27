@@ -30,6 +30,23 @@
         android:textSize="17sp"
         android:textColorHint="@color/dark_gray" />
 
+    <!-- Type Spinner Label -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Question Type:"
+        android:fontFamily="@font/poppinsasemibold"
+        android:textColor="@color/black"
+        android:textSize="17sp"
+        android:paddingTop="8dp"/>
+
+    <!-- Spinner for Question Type -->
+    <Spinner
+        android:id="@+id/question_type_spinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:entries="@array/question_types" />
+
     <!-- Answer Label -->
     <TextView
         android:layout_width="match_parent"
@@ -47,17 +64,12 @@
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
-        <EditText
-            android:id="@+id/answer_field"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:id="@+id/answer_container"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="Enter answer here"
-            android:padding="8dp"
-            android:fontFamily="@font/poppinsregular"
-            android:textColor="@color/black"
-            android:textSize="17sp"
-            android:textColorHint="@color/dark_gray"/>
+            android:orientation="vertical"
+            android:layout_marginTop="8dp" />
 
         <ImageButton
             android:id="@+id/add_qa"
