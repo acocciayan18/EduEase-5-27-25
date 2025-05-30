@@ -8,12 +8,15 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -27,15 +30,17 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 public class TakeQuiz extends BaseActivity {
 
     private LinearLayout qaContainer;
-    private List<Map<String, String>> questionsList;
+    private List<Map<String, Object>> questionsList;
+
     private String quizId;
+
+    private String title;
     private DatabaseReference localQuizzesRef;
 
     @Override
@@ -52,9 +57,9 @@ public class TakeQuiz extends BaseActivity {
 
         qaContainer = findViewById(R.id.qa_container);
 
+
         showLoading();
 
-        // Initialize secondary Firebase app
         FirebaseApp secondaryApp;
         try {
             secondaryApp = FirebaseApp.getInstance("Secondary");
@@ -71,99 +76,176 @@ public class TakeQuiz extends BaseActivity {
         FirebaseDatabase secondaryDatabase = FirebaseDatabase.getInstance(secondaryApp);
         localQuizzesRef = secondaryDatabase.getReference("local_quizzes");
 
-        // Get quiz ID
         quizId = getIntent().getStringExtra("QUIZ_ID");
         if (quizId != null) {
+            questionsList = new ArrayList<>();
             loadQuizDataFromRealtimeDB(quizId);
+
         } else {
             Toast.makeText(this, "Quiz ID not provided.", Toast.LENGTH_SHORT).show();
+            hideLoading();
             finish();
         }
 
-        // Submit button
+        TextView titleTextView = findViewById(R.id.quiz_title);
+        String title = getIntent().getStringExtra("QUIZ_TITLE"); // use "quizTitle", not "QUIZ_TITLE"
+        if (title != null) {
+            titleTextView.setText(title);
+        }
+
+
         Button submitButton = findViewById(R.id.submit_btn);
         submitButton.setOnClickListener(v -> handleSubmit());
     }
 
-    @SuppressLint("SetTextI18n")
     private void loadQuizDataFromRealtimeDB(String quizId) {
-        localQuizzesRef.child(quizId).addListenerForSingleValueEvent(new ValueEventListener() {
+        DatabaseReference quizRef = FirebaseDatabase.getInstance().getReference("local_quizzes").child(quizId);
+        quizRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
-            public void onDataChange(DataSnapshot snapshot) {
-                if (!snapshot.exists()) {
-                    Toast.makeText(TakeQuiz.this, "Quiz not found.", Toast.LENGTH_SHORT).show();
-                    finish();
-                    return;
-                }
-
-                // Title
-                String title = snapshot.child("title").getValue(String.class);
-                if (title != null) {
-                    TextView quizTitle = findViewById(R.id.quiz_title);
-                    quizTitle.setText(title);
-                }
-
-                qaContainer.removeAllViews();
-                questionsList = new ArrayList<>();
-
-                int i = 1;
-                while (snapshot.hasChild("Question " + i)) {
-                    DataSnapshot questionSnap = snapshot.child("Question " + i);
-                    Map<String, String> qa = (Map<String, String>) questionSnap.getValue();
-                    if (qa != null) {
-                        questionsList.add(qa);
-                    }
-                    i++;
-                }
-
-                Collections.shuffle(questionsList);
-
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
                 int questionNumber = 1;
-                for (Map<String, String> qa : questionsList) {
-                    addQuestionBlock(questionNumber++, qa.get("question"));
+
+                DataSnapshot mcSnapshot = snapshot.child("multiple_choice");
+                for (DataSnapshot item : mcSnapshot.getChildren()) {
+                    Object raw = item.getValue();
+                    if (raw instanceof Map) {
+                        addQuestionBlock(questionNumber++, (Map<String, Object>) raw, "multiple_choice");
+                    }
                 }
 
+                DataSnapshot idSnapshot = snapshot.child("identification");
+                for (DataSnapshot item : idSnapshot.getChildren()) {
+                    Object raw = item.getValue();
+                    if (raw instanceof Map) {
+                        addQuestionBlock(questionNumber++, (Map<String, Object>) raw, "identification");
+                    }
+                }
+
+                DataSnapshot tfSnapshot = snapshot.child("true_or_false");
+                for (DataSnapshot item : tfSnapshot.getChildren()) {
+                    Object raw = item.getValue();
+                    if (raw instanceof Map) {
+                        addQuestionBlock(questionNumber++, (Map<String, Object>) raw, "true_or_false");
+                    }
+                }
+
+                // ✅ Hide loading once done
                 hideLoading();
             }
 
             @Override
-            public void onCancelled(DatabaseError error) {
-                hideLoading();
-                Toast.makeText(TakeQuiz.this, "Error loading quiz: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+            public void onCancelled(@NonNull DatabaseError error) {
+                Toast.makeText(TakeQuiz.this, "Failed to load quiz.", Toast.LENGTH_SHORT).show();
+                hideLoading(); // Also hide on error
             }
         });
     }
 
-    private void addQuestionBlock(int questionNumber, String question) {
+
+
+    private void addQuestionBlock(int questionNumber, Map<String, Object> questionData, String type) {
         LayoutInflater inflater = LayoutInflater.from(this);
         View qaBlock = inflater.inflate(R.layout.ayan_take_quiz_edittext, qaContainer, false);
 
         TextView questionNumberView = qaBlock.findViewById(R.id.question_number);
         EditText questionField = qaBlock.findViewById(R.id.question_field);
         EditText answerField = qaBlock.findViewById(R.id.answer_field);
+        RadioGroup choicesGroup = qaBlock.findViewById(R.id.choices_group);
+        RadioButton choiceA = qaBlock.findViewById(R.id.choice_a);
+        RadioButton choiceB = qaBlock.findViewById(R.id.choice_b);
+        RadioButton choiceC = qaBlock.findViewById(R.id.choice_c);
+        RadioButton choiceD = qaBlock.findViewById(R.id.choice_d);
 
         questionNumberView.setText("#" + questionNumber + " Question:");
-        questionField.setText(question);
-        questionField.setFocusable(false);
-        questionField.setClickable(false);
-        questionField.setFocusableInTouchMode(false);
-        questionField.setBackground(null);
-        questionField.setTextIsSelectable(false);
+        questionField.setText((String) questionData.get("question"));
 
-        answerField.setHint("Enter your answer here");
-        qaBlock.setTag(questionNumber - 1);
+        switch (type) {
+            case "multiple_choice":
+                answerField.setVisibility(View.GONE);
+                choicesGroup.setVisibility(View.VISIBLE);
 
+                choiceA.setVisibility(View.VISIBLE);
+                choiceB.setVisibility(View.VISIBLE);
+                choiceC.setVisibility(View.VISIBLE);
+                choiceD.setVisibility(View.VISIBLE);
+
+                List<String> choices = (List<String>) questionData.get("choices");
+
+                choiceA.setVisibility(View.GONE);
+                choiceB.setVisibility(View.GONE);
+                choiceC.setVisibility(View.GONE);
+                choiceD.setVisibility(View.GONE);
+
+                if (choices != null) {
+                    int size = Math.min(choices.size(), 4);
+                    if (size > 0) {
+                        choiceA.setText(choices.get(0));
+                        choiceA.setVisibility(View.VISIBLE);
+                    }
+                    if (size > 1) {
+                        choiceB.setText(choices.get(1));
+                        choiceB.setVisibility(View.VISIBLE);
+                    }
+                    if (size > 2) {
+                        choiceC.setText(choices.get(2));
+                        choiceC.setVisibility(View.VISIBLE);
+                    }
+                    if (size > 3) {
+                        choiceD.setText(choices.get(3));
+                        choiceD.setVisibility(View.VISIBLE);
+                    }
+                }
+
+                break;
+
+
+
+            case "true_or_false":
+                answerField.setVisibility(View.GONE);
+                choicesGroup.setVisibility(View.VISIBLE);
+
+                choiceA.setText("True");
+                choiceB.setText("False");
+
+                choiceC.setVisibility(View.GONE);
+                choiceD.setVisibility(View.GONE);
+                break;
+
+
+            case "identification":
+                answerField.setVisibility(View.VISIBLE);
+                choicesGroup.setVisibility(View.GONE);
+                break;
+        }
+
+        questionData.put("type", type); // Store the type
+        questionsList.add(questionData);
+        // Add to list for scoring
+
+        qaBlock.setTag(questionData);
         qaContainer.addView(qaBlock);
     }
 
+
     private void handleSubmit() {
+
+        showLoading();
         boolean allAnswered = true;
 
         for (int i = 0; i < qaContainer.getChildCount(); i++) {
             View child = qaContainer.getChildAt(i);
             EditText answerField = child.findViewById(R.id.answer_field);
-            if (answerField.getText().toString().trim().isEmpty()) {
+            if (answerField.getVisibility() == View.VISIBLE && answerField.getText().toString().trim().isEmpty()) {
                 allAnswered = false;
+
+                hideLoading();
+                break;
+            }
+
+            RadioGroup choicesGroup = child.findViewById(R.id.choices_group);
+            if (choicesGroup.getVisibility() == View.VISIBLE && choicesGroup.getCheckedRadioButtonId() == -1) {
+                allAnswered = false;
+                hideLoading();
                 break;
             }
         }
@@ -185,16 +267,43 @@ public class TakeQuiz extends BaseActivity {
 
         for (int i = 0; i < qaContainer.getChildCount(); i++) {
             View child = qaContainer.getChildAt(i);
+            Object tag = child.getTag();
+
+            // Ensure tag is a valid map
+            if (!(tag instanceof Map)) continue;
+
+            Map<String, Object> questionData = (Map<String, Object>) tag;
+            String type = (String) questionData.get("type");
+            String userAnswer = "";
+
+            RadioGroup choicesGroup = child.findViewById(R.id.choices_group);
             EditText answerField = child.findViewById(R.id.answer_field);
-            String userAnswer = answerField.getText().toString().trim();
+
+            if ("multiple_choice".equals(type) || "true_or_false".equals(type)) {
+                int selectedId = choicesGroup.getCheckedRadioButtonId();
+                if (selectedId != -1) {
+                    RadioButton selected = child.findViewById(selectedId);
+                    if (selected != null) {
+                        userAnswer = selected.getText().toString().trim();
+                    }
+                }
+            } else if ("identification".equals(type)) {
+                if (answerField.getVisibility() == View.VISIBLE) {
+                    userAnswer = answerField.getText().toString().trim();
+                }
+            }
+
             userAnswers.add(userAnswer);
         }
 
         QuizDataHolder.setQuestionsList(questionsList);
         QuizDataHolder.setUserAnswers(userAnswers);
 
+        hideLoading();
+
         Intent intent = new Intent(TakeQuiz.this, QuizResult.class);
         startActivity(intent);
         finish();
     }
+
 }

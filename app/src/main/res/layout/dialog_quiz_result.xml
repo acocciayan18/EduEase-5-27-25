@@ -1,51 +1,76 @@
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/result_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/ayan_bg3"
     android:padding="16dp">
 
-    <LinearLayout
-        android:orientation="vertical"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+    <!-- Title -->
+    <TextView
+        android:id="@+id/result_message"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/poppinsbold"
+        android:text="QUIZ COMPLETED!"
+        android:textColor="@color/white"
+        android:textSize="22sp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/scroll_area"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="64dp"
+        android:layout_marginBottom="8dp"/>
 
-        <TextView
-            android:id="@+id/result_message"
-            android:text="QUIZ COMPLETED!"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@color/white"
-            android:fontFamily="@font/poppinsbold"
-            android:textSize="22sp"
-            android:layout_gravity="center_horizontal"
-            android:paddingBottom="24dp" />
-
-        <TextView
-            android:id="@+id/score_message"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@color/white"
-            android:textSize="18sp"
-            android:fontFamily="@font/poppinsmedium"
-            android:layout_gravity="center_horizontal"
-            android:paddingBottom="24dp" />
+    <!-- Scrollable content -->
+    <ScrollView
+        android:id="@+id/scroll_area"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        app:layout_constraintTop_toBottomOf="@id/result_message"
+        app:layout_constraintBottom_toTopOf="@id/finish_button"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <LinearLayout
-            android:id="@+id/qa_container"
+            android:id="@+id/scroll_content"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical" />
+            android:orientation="vertical"
+            android:paddingBottom="24dp">
 
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/finish_button"
-            android:layout_width="170dp"
-            android:layout_height="55dp"
-            android:text="FINISH"
-            android:layout_gravity="center_horizontal"
-            android:textColor="@android:color/white"
-            android:textSize="18sp"
-            android:background="@drawable/ayan_finish_button_bg"
-            android:onClick="finishQuiz"
-            android:layout_marginTop="32dp" />
-    </LinearLayout>
-</ScrollView>
+            <TextView
+                android:id="@+id/score_message"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                android:fontFamily="@font/poppinsmedium"
+                android:layout_gravity="center_horizontal"
+                android:paddingBottom="24dp" />
+
+            <LinearLayout
+                android:id="@+id/qa_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Finish button -->
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/finish_button"
+        android:layout_width="170dp"
+        android:layout_height="55dp"
+        android:text="FINISH"
+        android:textColor="@android:color/white"
+        android:textSize="18sp"
+        android:fontFamily="@font/poppinsbold"
+        android:background="@drawable/ayan_finish_button_bg"
+        android:onClick="finishQuiz"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="64dp" />
+</androidx.constraintlayout.widget.ConstraintLayout>

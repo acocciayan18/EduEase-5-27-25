@@ -58,7 +58,7 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
 
     private EditText searchQuiz;
     private QuizAdapter quizAdapter;
-    private List<Quiz> quizList;  // Original quiz list from Firestore
+    private List<Quiz> quizList;
     private List<Quiz> filteredQuizList;  // Filtered quiz list for search
     private FirebaseFirestore db;
     private MediaPlayer mediaPlayer;
@@ -825,6 +825,13 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
                         filteredQuizList.addAll(quizList);
                         quizAdapter.notifyDataSetChanged();
 
+//                        quizAdapter = new QuizAdapter(quizList, quiz -> {
+//                            Intent intent = new Intent(Home.this, TakeQuiz.class);
+//                            intent.putExtra("quizId", quiz.getId());
+//                            intent.putExtra("quizTitle", quiz.getTitle());
+//                            startActivity(intent);
+//                        });
+
                         // UI updates
                         RecyclerView recyclerView = findViewById(R.id.quizzes_recycler_view);
                         TextView emptyView = findViewById(R.id.empty_view);
@@ -849,6 +856,9 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
                         Log.e("Home", "Failed to load local quizzes", error.toException());
                     }
                 });
+
+
+
     }
 
 
@@ -891,8 +901,7 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
                 .setItems(new CharSequence[]{
                         "Edit",
                         "Delete",
-                        "Review",
-                        "Quiz"
+                        "Take Quiz"
                 }, (dialog, which) -> {
                     switch (which) {
                         case 0: // Edit Quiz
@@ -906,36 +915,16 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
                         case 2: // Review (Flashcards)
                             break;
                         case 3: // Take Quiz
-                            showQuizTypeDialog(quiz);
+                            Intent takeIdentificationIntent = new Intent(Home.this, TakeQuiz.class);
+                            takeIdentificationIntent.putExtra("QUIZ_TITLE", quiz.getTitle());
+                            takeIdentificationIntent.putExtra("QUIZ_ID", quiz.getId());
+                            startActivity(takeIdentificationIntent);
                             break;
                     }
                 })
                 .show();
     }
 
-    private void showQuizTypeDialog(Quiz quiz) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Choose Quiz Type")
-                .setItems(new CharSequence[]{
-                        "Identification",
-                        "Multiple Choice",
-                        "True or False"
-                }, (dialog, which) -> {
-                    switch (which) {
-                        case 0: // Identification
-                            Intent takeIdentificationIntent = new Intent(Home.this, TakeQuiz.class);
-                            takeIdentificationIntent.putExtra("QUIZ_ID", quiz.getId());
-                            takeIdentificationIntent.putExtra("QUIZ_TYPE", "Identification");
-                            startActivity(takeIdentificationIntent);
-                            break;
-                        case 1: // Multiple Choice
-                            break;
-                        case 2: // True or False
-                            break;
-                    }
-                })
-                .show();
-    }
 
 
     private void deleteQuiz(Quiz quiz) {

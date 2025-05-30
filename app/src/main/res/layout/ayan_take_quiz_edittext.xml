@@ -8,9 +8,7 @@
     android:layout_marginTop="8dp"
     android:background="@drawable/edittext_gradient_border">
 
-
-    <!-- Question Field -->
-
+    <!-- Question Number -->
     <TextView
         android:id="@+id/question_number"
         android:layout_width="match_parent"
@@ -20,48 +18,85 @@
         android:textColor="@color/black"
         android:textSize="17sp" />
 
+    <!-- Question Text (read-only) -->
     <EditText
         android:id="@+id/question_field"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Enter question here"
+        android:hint="Question text here"
         android:padding="8dp"
         android:fontFamily="@font/poppinsregular"
         android:textColor="@color/black"
         android:textSize="17sp"
-        android:textColorHint="@color/dark_gray" />
+        android:textColorHint="@color/dark_gray"
+        android:focusable="false"
+        android:clickable="false"
+        android:background="@android:color/transparent"
+        android:textIsSelectable="false" />
 
-    <!-- Answer Label -->
+    <!-- Label -->
     <TextView
+        android:id="@+id/answer_label"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Answer:"
         android:fontFamily="@font/poppinsasemibold"
         android:textColor="@color/black"
-        android:textSize="17sp"
-        android:paddingTop="8dp" />
+        android:textSize="17sp" />
 
-    <!-- Answer and Delete Button -->
-    <LinearLayout
+    <!-- Text Answer Field (for Identification/TrueFalse) -->
+    <EditText
+        android:id="@+id/answer_field"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:hint="Enter answer here"
+        android:padding="8dp"
+        android:fontFamily="@font/poppinsregular"
+        android:textColor="@color/black"
+        android:textSize="17sp"
+        android:textColorHint="@color/dark_gray"
+        android:visibility="gone" />
 
-        <EditText
-            android:id="@+id/answer_field"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="Enter answer here"
-            android:padding="8dp"
+    <!-- Multiple Choice Options -->
+    <RadioGroup
+        android:id="@+id/choices_group"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:paddingTop="8dp">
+
+        <RadioButton
+            android:id="@+id/choice_a"
+            android:layout_width="wrap_content"
+            android:layout_height="35dp"
+            android:text="Choice A"
             android:fontFamily="@font/poppinsregular"
-            android:textColor="@color/black"
-            android:textSize="17sp"
-            android:textColorHint="@color/dark_gray"/>
+            android:textColor="@color/black" />
 
+        <RadioButton
+            android:id="@+id/choice_b"
+            android:layout_width="wrap_content"
+            android:layout_height="35dp"
+            android:text="Choice B"
+            android:fontFamily="@font/poppinsregular"
+            android:textColor="@color/black" />
 
+        <RadioButton
+            android:id="@+id/choice_c"
+            android:layout_width="wrap_content"
+            android:layout_height="35dp"
+            android:text="Choice C"
+            android:fontFamily="@font/poppinsregular"
+            android:textColor="@color/black" />
 
+        <RadioButton
+            android:id="@+id/choice_d"
+            android:layout_width="wrap_content"
+            android:layout_height="35dp"
+            android:text="Choice D"
+            android:fontFamily="@font/poppinsregular"
+            android:textColor="@color/black" />
+    </RadioGroup>
 
-    </LinearLayout>
 </LinearLayout>

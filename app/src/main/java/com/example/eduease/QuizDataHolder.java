@@ -4,14 +4,14 @@ import java.util.List;
 import java.util.Map;
 
 public class QuizDataHolder {
-    private static List<Map<String, String>> questionsList;
+    private static List<Map<String, Object>> questionsList;
     private static List<String> userAnswers;
 
-    public static void setQuestionsList(List<Map<String, String>> list) {
+    public static void setQuestionsList(List<Map<String, Object>> list) {
         questionsList = list;
     }
 
-    public static List<Map<String, String>> getQuestionsList() {
+    public static List<Map<String, Object>> getQuestionsList() {
         return questionsList;
     }
 
