@@ -48,6 +48,7 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import android.widget.Spinner;
@@ -164,7 +165,7 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
 
 
     @SuppressLint("NotifyDataSetChanged")
-    private void loadBonusFlashQuizzesFromRealtime() {
+    void loadBonusFlashQuizzesFromRealtime() {
         showLoading(); // Show loading indicator at start
 
         AppCompatButton helpButton = findViewById(R.id.help_button);
@@ -176,25 +177,12 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
 
 
 
-        FirebaseApp secondaryApp;
 
-        try {
-            secondaryApp = FirebaseApp.getInstance("Secondary");
-        } catch (IllegalStateException e) {
-            FirebaseOptions options = new FirebaseOptions.Builder()
-                    .setApplicationId("1:882141634417:android:ac69b51d83d01def3460d0")
-                    .setApiKey("AIzaSyBlECTZf28SbEc4xHsz7JnH99YtTw6T58I")
-                    .setProjectId("edu-ease-ni-ayan")
-                    .setDatabaseUrl("https://edu-ease-ni-ayan-default-rtdb.firebaseio.com/")
-                    .build();
-
-            secondaryApp = FirebaseApp.initializeApp(getApplicationContext(), options, "Secondary");
-        }
 
         quizList.clear();
         filteredQuizList.clear();
 
-        FirebaseDatabase secondaryDatabase = FirebaseDatabase.getInstance(secondaryApp);
+        FirebaseDatabase secondaryDatabase = FirebaseDatabase.getInstance();
         DatabaseReference bonusFlashRef = secondaryDatabase.getReference("bonus_quizzes");
 
         bonusFlashRef.addValueEventListener(new ValueEventListener() {
@@ -207,6 +195,7 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
                     String description = "";
                     boolean isFlash = true;
                     String type = "";
+                    String creatorId = "";
 
                     if (quizSnapshot.child("title").exists()) {
                         quizTitle = quizSnapshot.child("title").getValue(String.class);
@@ -223,6 +212,10 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
                     if (quizSnapshot.child("type").exists()) {
                         type = quizSnapshot.child("type").getValue(String.class);
                     }
+                    if (quizSnapshot.child("creatorId").exists()) {
+                        creatorId = quizSnapshot.child("creatorId").getValue(String.class);
+                    }
+
 
                     if ("public".equalsIgnoreCase(type)) {
                         Quiz quiz = new Quiz();
@@ -230,6 +223,7 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
                         quiz.setDescription(description);
                         quiz.setId(quizSnapshot.getKey());
                         quiz.setFlash(isFlash);
+                        quiz.setCreatorId(creatorId);
 
                         quizList.add(quiz);
                     }
@@ -269,88 +263,63 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
 
 
     @SuppressLint("NotifyDataSetChanged")
-    private void loadLocalBonusFlashQuizzesFromRealtime() {
-        showLoading();
+    void loadLocalBonusFlashQuizzesFromRealtime() {
+        showLoading(); // Show loading indicator
 
         AppCompatButton helpButton = findViewById(R.id.help_button);
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             helpButton.setTooltipText("A private and local topic-based quiz with random bonus points. Correct answers earn the bonus based on the box you choose.");
         }
 
+        quizList.clear(); // Clear existing quiz list to avoid duplicates
+        filteredQuizList.clear(); // Clear filtered list
 
-        FirebaseApp secondaryApp;
-
-        try {
-            secondaryApp = FirebaseApp.getInstance("Secondary");
-        } catch (IllegalStateException e) {
-            FirebaseOptions options = new FirebaseOptions.Builder()
-                    .setApplicationId("1:882141634417:android:ac69b51d83d01def3460d0")
-                    .setApiKey("AIzaSyBlECTZf28SbEc4xHsz7JnH99YtTw6T58I")
-                    .setProjectId("edu-ease-ni-ayan")
-                    .setDatabaseUrl("https://edu-ease-ni-ayan-default-rtdb.firebaseio.com/")
-                    .build();
-            secondaryApp = FirebaseApp.initializeApp(getApplicationContext(), options, "Secondary");
-        }
-
-        quizList.clear();
-        filteredQuizList.clear();
-
-        FirebaseDatabase secondaryDatabase = FirebaseDatabase.getInstance(secondaryApp);
-        DatabaseReference bonusFlashRef = secondaryDatabase.getReference("bonus_quizzes");
+        FirebaseDatabase database = FirebaseDatabase.getInstance(); // Use default instance
+        DatabaseReference bonusFlashRef = database.getReference("bonus_quizzes");
 
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser == null) {
-            Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "User not logged in. Please log in to view your quizzes.", Toast.LENGTH_SHORT).show();
+            hideLoading(); // Hide loading if user is not logged in
             return;
         }
-        String currentUserId = currentUser.getUid();
+        String currentUserId = currentUser.getUid(); // Get current user's UID
 
         bonusFlashRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                quizList.clear();  // Clear existing quiz list to avoid duplicates
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                quizList.clear(); // Clear again in case of previous data or multiple calls
 
                 // Loop through each bonus flash quiz (root level)
                 for (DataSnapshot quizSnapshot : dataSnapshot.getChildren()) {
-                    // Get the title, description, flash, and type field directly from the data inside the snapshot
-                    String quizTitle = "";
-                    String description = "";
-                    boolean isFlash = true; // Default to false, will change if found
-                    String type = ""; // New variable to store the type
+                    // Safely retrieve values, providing default if not found
+                    String quizTitle = quizSnapshot.child("title").getValue(String.class);
+                    String description = quizSnapshot.child("description").getValue(String.class);
+                    Boolean isFlash = quizSnapshot.child("flash").getValue(Boolean.class); // Use Boolean object to handle null
+                    String type = quizSnapshot.child("type").getValue(String.class);
+                    String creatorId = quizSnapshot.child("creatorId").getValue(String.class);
 
-                    // Retrieve the title and description
-                    if (quizSnapshot.child("title").exists()) {
-                        quizTitle = quizSnapshot.child("title").getValue(String.class);
-                    }
+                    // Apply all three filtering conditions:
+                    // 1. type is "local" (case-insensitive)
+                    // 2. isFlash is true (and not null)
+                    // 3. creatorId matches the current user's UID (and not null)
+                    if ("local".equalsIgnoreCase(type) &&
+                            isFlash != null && isFlash && // Check if it's not null and true
+                            Objects.equals(creatorId, currentUserId)) { // Use Objects.equals for null-safe string comparison
 
-                    if (quizSnapshot.child("description").exists()) {
-                        description = quizSnapshot.child("description").getValue(String.class);
-                    }
-
-                    // Check if the "flash" field exists and set it accordingly
-                    if (quizSnapshot.child("flash").exists()) {
-                        isFlash = quizSnapshot.child("flash").getValue(Boolean.class);
-                    }
-
-                    // Check if the "type" field exists and set it accordingly
-                    if (quizSnapshot.child("type").exists()) {
-                        type = quizSnapshot.child("type").getValue(String.class);
-                    }
-
-                    // Only add quizzes that are of type "public"
-                    if ("local".equalsIgnoreCase(type)) {
                         // Create a Quiz object and add it to the list
                         Quiz quiz = new Quiz();
-                        quiz.setTitle(quizTitle);  // Set the title from the data
-                        quiz.setDescription(description);  // Set the description
-                        quiz.setId(quizSnapshot.getKey()); // Using the snapshot key as ID (root)
-                        quiz.setFlash(isFlash); // Mark as Bonus Flash quiz if flash is true
+                        quiz.setTitle(quizTitle != null ? quizTitle : "Untitled Quiz"); // Provide default for title
+                        quiz.setDescription(description != null ? description : "No description available."); // Provide default for description
+                        quiz.setId(quizSnapshot.getKey()); // Use the snapshot key as ID
+                        quiz.setFlash(true); // Since we filtered for isFlash=true, we can set it directly
+                        quiz.setCreatorId(creatorId);
 
-                        quizList.add(quiz);  // Add quiz to the list
+                        quizList.add(quiz); // Add quiz to the list
                     }
                 }
 
+                // Update filtered list and notify adapter
                 filteredQuizList.clear();
                 filteredQuizList.addAll(quizList);
                 quizAdapter.notifyDataSetChanged();
@@ -358,26 +327,26 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
                 // Handle empty view visibility and title update
                 RecyclerView recyclerView = findViewById(R.id.quizzes_recycler_view);
                 TextView emptyView = findViewById(R.id.empty_view);
-                TextView quizTitle = findViewById(R.id.quiz_title);  // Reference to quiz title TextView
+                TextView quizTitleTextView = findViewById(R.id.quiz_title); // Renamed to avoid confusion with local variable
 
-                if (quizList.isEmpty()) {
-                    emptyView.setVisibility(View.VISIBLE);  // Show the empty view
-                    recyclerView.setVisibility(View.GONE);  // Hide the RecyclerView
-                    quizTitle.setText("Public Bonus Flash");  // Set the title to "Public Bonus Flash"
+                if (filteredQuizList.isEmpty()) { // Check filteredQuizList, not quizList
+                    emptyView.setVisibility(View.VISIBLE); // Show the empty view
+                    recyclerView.setVisibility(View.GONE); // Hide the RecyclerView
+                    quizTitleTextView.setText("Local Bonus Flash"); // Set appropriate title
                 } else {
-                    emptyView.setVisibility(View.GONE);     // Hide the empty view
-                    recyclerView.setVisibility(View.VISIBLE);  // Show the RecyclerView
-                    quizTitle.setText("Public Bonus Flash");  // Restore the original title
+                    emptyView.setVisibility(View.GONE); // Hide the empty view
+                    recyclerView.setVisibility(View.VISIBLE); // Show the RecyclerView
+                    quizTitleTextView.setText("Local Bonus Flash"); // Set appropriate title
                 }
 
-                hideLoading();
-
+                hideLoading(); // Hide loading after all data processing and UI updates
             }
 
             @Override
-            public void onCancelled(DatabaseError databaseError) {
-                Log.e("Home", "Error fetching local bonus flash quizzes", databaseError.toException());
-                hideLoading();
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                Log.e("Home", "Error fetching local bonus flash quizzes: " + databaseError.getMessage(), databaseError.toException());
+                Toast.makeText(Home.this, "Failed to load quizzes: " + databaseError.getMessage(), Toast.LENGTH_LONG).show();
+                hideLoading(); // Hide loading on error
             }
         });
     }
@@ -393,26 +362,12 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
             helpButton.setTooltipText("Quizzes that shared publicly by you and others — anyone online can view and take them.");
         }
 
-        FirebaseApp secondaryApp;
 
-        // Initialize secondary FirebaseApp only if not already initialized
-        try {
-            secondaryApp = FirebaseApp.getInstance("Secondary");
-        } catch (IllegalStateException e) {
-            FirebaseOptions options = new FirebaseOptions.Builder()
-                    .setApplicationId("1:882141634417:android:ac69b51d83d01def3460d0")
-                    .setApiKey("AIzaSyBlECTZf28SbEc4xHsz7JnH99YtTw6T58I")
-                    .setProjectId("edu-ease-ni-ayan")
-                    .setDatabaseUrl("https://edu-ease-ni-ayan-default-rtdb.firebaseio.com/")
-                    .build();
-
-            secondaryApp = FirebaseApp.initializeApp(getApplicationContext(), options, "Secondary");
-        }
 
         quizList.clear();
         filteredQuizList.clear();
 
-        FirebaseDatabase secondaryDatabase = FirebaseDatabase.getInstance(secondaryApp);
+        FirebaseDatabase secondaryDatabase = FirebaseDatabase.getInstance();
         DatabaseReference publicQuizzesRef = secondaryDatabase.getReference("public_quizzes");
 
         publicQuizzesRef.addValueEventListener(new ValueEventListener() {
@@ -423,6 +378,7 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
                 for (DataSnapshot quizSnapshot : dataSnapshot.getChildren()) {
                     String quizTitle = "";
                     String description = "";
+                    String creatorId = "";
 
                     if (quizSnapshot.child("title").exists()) {
                         quizTitle = quizSnapshot.child("title").getValue(String.class);
@@ -432,14 +388,20 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
                         description = quizSnapshot.child("description").getValue(String.class);
                     }
 
+                    if (quizSnapshot.child("creatorId").exists()) {
+                        creatorId = quizSnapshot.child("creatorId").getValue(String.class);
+                    }
+
                     Quiz quiz = new Quiz();
                     quiz.setTitle(quizTitle);
                     quiz.setDescription(description);
                     quiz.setId(quizSnapshot.getKey());
+                    quiz.setCreatorId(creatorId);
                     quiz.setTypeQuiz("public");
 
                     quizList.add(quiz);
                 }
+
 
                 filteredQuizList.clear();
                 filteredQuizList.addAll(quizList);
@@ -483,26 +445,12 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
             helpButton.setTooltipText("A mix of random quiz topics from different categories made by admins. Choose from multiple choice, identification, or true or false modes.");
         }
 
-        FirebaseApp secondaryApp;
 
-        // Initialize secondary FirebaseApp if not already
-        try {
-            secondaryApp = FirebaseApp.getInstance("Secondary");
-        } catch (IllegalStateException e) {
-            FirebaseOptions options = new FirebaseOptions.Builder()
-                    .setApplicationId("1:882141634417:android:ac69b51d83d01def3460d0")
-                    .setApiKey("AIzaSyBlECTZf28SbEc4xHsz7JnH99YtTw6T58I")
-                    .setProjectId("edu-ease-ni-ayan")
-                    .setDatabaseUrl("https://edu-ease-ni-ayan-default-rtdb.firebaseio.com/")
-                    .build();
-
-            secondaryApp = FirebaseApp.initializeApp(getApplicationContext(), options, "Secondary");
-        }
 
         quizList.clear();
         filteredQuizList.clear();
 
-        FirebaseDatabase secondaryDatabase = FirebaseDatabase.getInstance(secondaryApp);
+        FirebaseDatabase secondaryDatabase = FirebaseDatabase.getInstance();
         DatabaseReference randomQuizRef = secondaryDatabase.getReference("random_quiz_topic");
 
         randomQuizRef.addListenerForSingleValueEvent(new ValueEventListener() {
@@ -513,6 +461,7 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
                 for (DataSnapshot quizSnapshot : dataSnapshot.getChildren()) {
                     String quizTitle = "";
                     String type = "";
+                    String creatorId = "";
 
                     if (quizSnapshot.child("title").exists()) {
                         quizTitle = quizSnapshot.child("title").getValue(String.class);
@@ -521,6 +470,9 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
                     if (quizSnapshot.child("type").exists()) {
                         type = quizSnapshot.child("type").getValue(String.class);
                     }
+                    if (quizSnapshot.child("creatorId").exists()) {
+                        creatorId = quizSnapshot.child("creatorId").getValue(String.class);
+                    }
 
                     if (quizTitle != null && type.equals("randomquiz")) {
                         Quiz quiz = new Quiz();
@@ -528,7 +480,7 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
                         quiz.setDescription(""); // Optional
                         quiz.setId(quizSnapshot.getKey());
                         quiz.setType(type); // Add this to your Quiz model
-
+                        quiz.setCreatorId(creatorId);
                         quizList.add(quiz);
                     }
                 }
@@ -590,12 +542,12 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
 //    }
 
 
-    private void startRandomQuizActivity(String topicTitle, String quizType) {
-        Intent intent = new Intent(this, RandomQuizMultipleChoice.class);
-        intent.putExtra("topicTitle", topicTitle);
-        intent.putExtra("quizType", quizType);
-        startActivity(intent);
-    }
+//    private void startRandomQuizActivity(String topicTitle, String quizType) {
+//        Intent intent = new Intent(this, RandomQuizMultipleChoice.class);
+//        intent.putExtra("topicTitle", topicTitle);
+//        intent.putExtra("quizType", quizType);
+//        startActivity(intent);
+//    }
 
 
 
@@ -660,8 +612,7 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
         builder.setTitle("Choose an option")
                 .setItems(new CharSequence[]{
                         "Create Quiz",
-                        "Create Bonus Flash",
-                        "Import Quiz"
+                        "Create Bonus Flash"
                 }, (dialog, which) -> {
                     switch (which) {
                         case 0: // Create Quiz
@@ -670,9 +621,7 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
                         case 1: // Create Bonus Flash
                             showLocalOrPublicBonusFlashDialog();
                             break;
-                        case 2: // Import Quiz
-                            // Import Quiz logic here
-                            break;
+
                     }
                 })
                 .show();
@@ -696,10 +645,6 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
                 })
                 .show();
     }
-
-
-
-
 
 
 
@@ -784,20 +729,9 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
 
         String userId = currentUser.getUid();
 
-        FirebaseApp secondaryApp;
-        try {
-            secondaryApp = FirebaseApp.getInstance("Secondary");
-        } catch (IllegalStateException e) {
-            FirebaseOptions options = new FirebaseOptions.Builder()
-                    .setApplicationId("1:882141634417:android:ac69b51d83d01def3460d0")
-                    .setApiKey("AIzaSyBlECTZf28SbEc4xHsz7JnH99YtTw6T58I")
-                    .setProjectId("edu-ease-ni-ayan")
-                    .setDatabaseUrl("https://edu-ease-ni-ayan-default-rtdb.firebaseio.com/")
-                    .build();
-            secondaryApp = FirebaseApp.initializeApp(getApplicationContext(), options, "Secondary");
-        }
 
-        FirebaseDatabase secondaryDatabase = FirebaseDatabase.getInstance(secondaryApp);
+
+        FirebaseDatabase secondaryDatabase = FirebaseDatabase.getInstance();
         DatabaseReference quizzesRef = secondaryDatabase.getReference("local_quizzes");
 
         quizzesRef.orderByChild("creatorId").equalTo(userId)
@@ -880,7 +814,7 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
         }
 
         // Show options dialog for regular quizzes only
-        showQuizOptionsDialog(quiz);
+//        showQuizOptionsDialog(quiz);
     }
 
 
@@ -895,35 +829,35 @@ public class Home extends BaseActivity implements QuizAdapter.QuizClickListener 
         }
     }
 
-    private void showQuizOptionsDialog(Quiz quiz) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.CustomAlertDialog);
-        builder.setTitle("Choose an option")
-                .setItems(new CharSequence[]{
-                        "Edit",
-                        "Delete",
-                        "Take Quiz"
-                }, (dialog, which) -> {
-                    switch (which) {
-                        case 0: // Edit Quiz
-                            Intent editIntent = new Intent(Home.this, CreateQuiz.class);
-                            editIntent.putExtra("QUIZ_ID", quiz.getId());
-                            startActivity(editIntent);
-                            break;
-                        case 1: // Delete Quiz
-                            deleteQuiz(quiz);
-                            break;
-                        case 2: // Review (Flashcards)
-                            break;
-                        case 3: // Take Quiz
-                            Intent takeIdentificationIntent = new Intent(Home.this, TakeQuiz.class);
-                            takeIdentificationIntent.putExtra("QUIZ_TITLE", quiz.getTitle());
-                            takeIdentificationIntent.putExtra("QUIZ_ID", quiz.getId());
-                            startActivity(takeIdentificationIntent);
-                            break;
-                    }
-                })
-                .show();
-    }
+//    private void showQuizOptionsDialog(Quiz quiz) {
+//        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.CustomAlertDialog);
+//        builder.setTitle("Choose an option")
+//                .setItems(new CharSequence[]{
+//                        "Edit",
+//                        "Delete",
+//                        "Take Quiz"
+//                }, (dialog, which) -> {
+//                    switch (which) {
+//                        case 0: // Edit Quiz
+//                            Intent editIntent = new Intent(Home.this, CreateQuiz.class);
+//                            editIntent.putExtra("QUIZ_ID", quiz.getId());
+//                            startActivity(editIntent);
+//                            break;
+//                        case 1: // Delete Quiz
+//                            deleteQuiz(quiz);
+//                            break;
+//                        case 2: // Review (Flashcards)
+//                            break;
+//                        case 3: // Take Quiz
+//                            Intent takeIdentificationIntent = new Intent(Home.this, TakeQuiz.class);
+//                            takeIdentificationIntent.putExtra("QUIZ_TITLE", quiz.getTitle());
+//                            takeIdentificationIntent.putExtra("QUIZ_ID", quiz.getId());
+//                            startActivity(takeIdentificationIntent);
+//                            break;
+//                    }
+//                })
+//                .show();
+//    }
 
 
 

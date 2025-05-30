@@ -1,16 +1,13 @@
 package com.example.eduease;
 
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.EmailAuthProvider;
@@ -23,12 +20,12 @@ public class GooglePasswordSetup extends BaseActivity {
     private Button submitButton;
     private FirebaseAuth mAuth;
     private FirebaseUser currentUser;
-    private boolean passwordLinked = false; // to track if password was submitted
+    private boolean passwordLinked = false;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.google_provide_passsword); // assuming this is your XML name
+        setContentView(R.layout.google_provide_passsword);
 
         passwordEditText = findViewById(R.id.password);
         repasswordEditText = findViewById(R.id.repassword);
@@ -65,20 +62,18 @@ public class GooglePasswordSetup extends BaseActivity {
         AuthCredential credential = EmailAuthProvider.getCredential(currentUser.getEmail(), password);
 
         currentUser.linkWithCredential(credential).addOnCompleteListener(task -> {
+            hideLoading();
             if (task.isSuccessful()) {
-
-                hideLoading();
-
                 passwordLinked = true;
-//                Toast.makeText(this, "Password linked successfully!", Toast.LENGTH_SHORT).show();
 
-                // Go to main app screen or login screen
-                Intent intent = new Intent(GooglePasswordSetup.this, MainActivity.class);
-                startActivity(intent);
-                finish();
+                // Optional: reload the user if needed
+                currentUser.reload().addOnCompleteListener(reloadTask -> {
+                    Intent intent = new Intent(GooglePasswordSetup.this, Home.class);
+                    startActivity(intent);
+                    finish();
+                });
+
             } else {
-
-                hideLoading();
                 Toast.makeText(this, "Failed to link password: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
             }
         });
@@ -88,14 +83,14 @@ public class GooglePasswordSetup extends BaseActivity {
     protected void onDestroy() {
         super.onDestroy();
 
-        showLoading();
-
-        // Delete account if user exits before submitting password
         if (!passwordLinked && currentUser != null) {
+            showLoading();
             currentUser.delete().addOnCompleteListener(task -> {
+                hideLoading();
                 if (task.isSuccessful()) {
-                    hideLoading();
                     Toast.makeText(this, "Account removed. Please complete sign up next time.", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, "Failed to delete account: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
                 }
             });
         }
@@ -103,13 +98,10 @@ public class GooglePasswordSetup extends BaseActivity {
 
     @Override
     public void onBackPressed() {
-        // Confirm if user really wants to exit
         new AlertDialog.Builder(this)
                 .setTitle("Cancel Signup?")
                 .setMessage("If you go back now, your account will be removed.")
-                .setPositiveButton("Exit", (dialog, which) -> {
-                    super.onBackPressed(); // triggers onDestroy
-                })
+                .setPositiveButton("Exit", (dialog, which) -> GooglePasswordSetup.super.onBackPressed())
                 .setNegativeButton("Stay", null)
                 .show();
     }

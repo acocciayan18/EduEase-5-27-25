@@ -66,21 +66,9 @@ public class ayan_create_public_quizzes extends BaseActivity {
         quizDescription = findViewById(R.id.quiz_description);
         qaContainer = findViewById(R.id.qa_container);
 
-        // Initialize secondary Firebase App
-        FirebaseOptions options = new FirebaseOptions.Builder()
-                .setApplicationId("1:882141634417:android:ac69b51d83d01def3460d0")
-                .setApiKey("AIzaSyBlECTZf28SbEc4xHsz7JnH99YtTw6T58I")
-                .setProjectId("edu-ease-ni-ayan")
-                .setDatabaseUrl("https://edu-ease-ni-ayan-default-rtdb.firebaseio.com/")
-                .build();
 
-        try {
-            secondaryApp = FirebaseApp.initializeApp(this, options, "secondary");
-        } catch (IllegalStateException e) {
-            secondaryApp = FirebaseApp.getInstance("secondary");
-        }
 
-        publicDbRef = FirebaseDatabase.getInstance(secondaryApp).getReference("public_quizzes");
+        publicDbRef = FirebaseDatabase.getInstance().getReference("public_quizzes");
 
         MaterialButton saveButton = findViewById(R.id.save_btn);
         saveButton.setOnClickListener(v -> saveToSecondaryDatabase());

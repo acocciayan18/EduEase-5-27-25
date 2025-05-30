@@ -28,6 +28,19 @@
             android:name=".BonusFlashResult"
             android:exported="false"
             android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".Edit_Create_Public_Quiz"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".Edit_Create_Local_Bonus_Flash"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".Edit_Create_Local_Quiz"
+            android:exported="false"
+            android:screenOrientation="portrait" />
         <activity
             android:name=".CreateQuiz"
             android:exported="false"

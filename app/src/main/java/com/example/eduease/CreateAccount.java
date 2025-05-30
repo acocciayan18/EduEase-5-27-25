@@ -270,66 +270,72 @@ public class CreateAccount extends BaseActivity {
     }
 
     private void firebaseAuthWithGoogle(GoogleSignInAccount account) {
-        if (account == null) {
-            Log.w(TAG, "firebaseAuthWithGoogle: GoogleSignInAccount is null!");
-            Toast.makeText(this, "Google sign in failed. Please try again.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        showLoading();
-
         AuthCredential credential = GoogleAuthProvider.getCredential(account.getIdToken(), null);
         firebaseAuth.signInWithCredential(credential)
                 .addOnCompleteListener(this, task -> {
-                    hideLoading();
-
                     if (task.isSuccessful()) {
                         FirebaseUser user = firebaseAuth.getCurrentUser();
+                        if (user == null || user.getEmail() == null) {
+                            showToast("Google account error. Try again.");
+                            return;
+                        }
 
-                        if (user != null) {
-                            boolean isNewUser = Objects.requireNonNull(task.getResult().getAdditionalUserInfo()).isNewUser();
-                            String profileImageUrl = account.getPhotoUrl() != null
-                                    ? account.getPhotoUrl().toString()
-                                    : "@drawable/person";
+                        String email = user.getEmail();
 
-                            if (isNewUser) {
-                                redirectToPasswordSetup(user, profileImageUrl);
-                            } else {
-                                // Check if this Google account has no password set
-                                firebaseAuth.fetchSignInMethodsForEmail(user.getEmail())
-                                        .addOnCompleteListener(methodTask -> {
-                                            if (methodTask.isSuccessful()) {
-                                                boolean hasPassword = methodTask.getResult().getSignInMethods().contains("password");
-
-                                                if (!hasPassword) {
-                                                    redirectToPasswordSetup(user, profileImageUrl);
-                                                } else {
-                                                    Toast.makeText(this, "Welcome back, " + user.getDisplayName() + "!", Toast.LENGTH_SHORT).show();
-                                                    navigateToHome(user);
-                                                }
-                                            } else {
-                                                Log.e(TAG, "Error checking sign-in methods", methodTask.getException());
-                                                Toast.makeText(this, "Something went wrong. Please try again.", Toast.LENGTH_SHORT).show();
-                                            }
-                                        });
+                        boolean hasPassword = false;
+                        for (com.google.firebase.auth.UserInfo info : user.getProviderData()) {
+                            if (info.getProviderId().equals("password")) {
+                                hasPassword = true;
+                                break;
                             }
                         }
+
+                        if (!hasPassword) {
+                            Intent intent = new Intent(CreateAccount.this, GooglePasswordSetup.class);
+                            intent.putExtra("EMAIL", email);
+                            intent.putExtra("NAME", user.getDisplayName());
+                            startActivity(intent);
+                            finish();
+                        } else {
+                            updateUI(user);
+                        }
+
                     } else {
-                        Log.w(TAG, "firebaseAuthWithGoogle: signInWithCredential failed", task.getException());
-                        Toast.makeText(this, "Authentication failed. Please try again.", Toast.LENGTH_SHORT).show();
+                        Log.w(TAG, "firebaseAuthWithGoogle:failure", task.getException());
+                        showToast("Google Login failed. Try again.");
                     }
                 });
     }
 
-    private void redirectToPasswordSetup(FirebaseUser user, String profileImageUrl) {
-        Intent intent = new Intent(this, GooglePasswordSetup.class);
-        intent.putExtra("user_email", user.getEmail());
-        intent.putExtra("user_name", user.getDisplayName());
-        intent.putExtra("PROFILE_IMAGE_URL", profileImageUrl);
-        intent.putExtra("from", "signup");
-        startActivity(intent);
-        finish();
+    private void showToast(String message) {
+        runOnUiThread(() -> Toast.makeText(CreateAccount.this, message, Toast.LENGTH_SHORT).show());
     }
+
+    private void updateUI(FirebaseUser user) {
+        if (user != null) {
+            Intent homeIntent = new Intent(CreateAccount.this, Home.class);
+            ActivityOptions options = ActivityOptions.makeSceneTransitionAnimation(this);
+
+            GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
+            if (account != null && account.getPhotoUrl() != null) {
+                homeIntent.putExtra("PROFILE_IMAGE_URL", account.getPhotoUrl().toString());
+            }
+
+            homeIntent.putExtra("SKIP_MUSIC", true);
+            startActivity(homeIntent, options.toBundle());
+            finish();
+        }
+    }
+
+//    private void redirectToPasswordSetup(FirebaseUser user, String profileImageUrl) {
+//        Intent intent = new Intent(this, GooglePasswordSetup.class);
+//        intent.putExtra("user_email", user.getEmail());
+//        intent.putExtra("user_name", user.getDisplayName());
+//        intent.putExtra("PROFILE_IMAGE_URL", profileImageUrl);
+//        intent.putExtra("from", "signup");
+//        startActivity(intent);
+//        finish();
+//    }
 
 
 }

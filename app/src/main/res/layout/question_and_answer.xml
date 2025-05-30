@@ -57,40 +57,42 @@
         android:textSize="17sp"
         android:paddingTop="8dp" />
 
-    <!-- Answer and Delete Button -->
+    <!-- Answer Fields Container -->
+    <LinearLayout
+        android:id="@+id/answer_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="8dp" />
+
+    <!-- Add & Delete Buttons BELOW Answer Fields -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center_vertical">
-
-        <LinearLayout
-            android:id="@+id/answer_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginTop="8dp" />
+        android:gravity="end"
+        android:paddingTop="8dp">
 
         <ImageButton
             android:id="@+id/add_qa"
             android:layout_width="32dp"
-            android:padding="7dp"
             android:layout_height="32dp"
-            android:layout_gravity="center"
             android:background="@android:color/transparent"
             android:contentDescription="Add"
             android:scaleType="fitCenter"
-            android:src="@drawable/ayan_quiz_plus_icon" />
+            android:src="@drawable/ayan_quiz_plus_icon"
+            android:padding="7dp" />
 
         <ImageButton
             android:id="@+id/delete_qa"
-            android:padding="7dp"
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:layout_marginStart="4dp"
             android:background="@android:color/transparent"
             android:contentDescription="Delete"
             android:scaleType="fitCenter"
-            android:src="@drawable/ayan_quiz_delete_icon" />
+            android:src="@drawable/ayan_quiz_delete_icon"
+            android:padding="7dp" />
     </LinearLayout>
+
 </LinearLayout>

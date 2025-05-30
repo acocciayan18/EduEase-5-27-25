@@ -68,19 +68,9 @@ public class TakePublicQuiz extends BaseActivity {
 
 
     private void loadFromRealtimeDatabase(String typeQuiz, String quizId) {
-        try {
-            secondaryApp = FirebaseApp.getInstance("Secondary");
-        } catch (IllegalStateException e) {
-            FirebaseOptions options = new FirebaseOptions.Builder()
-                    .setApplicationId("1:882141634417:android:ac69b51d83d01def3460d0")
-                    .setApiKey("AIzaSyBlECTZf28SbEc4xHsz7JnH99YtTw6T58I")
-                    .setProjectId("edu-ease-ni-ayan")
-                    .setDatabaseUrl("https://edu-ease-ni-ayan-default-rtdb.firebaseio.com/")
-                    .build();
-            secondaryApp = FirebaseApp.initializeApp(getApplicationContext(), options, "Secondary");
-        }
 
-        FirebaseDatabase db = FirebaseDatabase.getInstance(secondaryApp);
+
+        FirebaseDatabase db = FirebaseDatabase.getInstance();
         db.getReference("public_quizzes").child(quizId)
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override

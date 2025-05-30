@@ -32,6 +32,8 @@ import java.util.Map;
 
 public class CreateBonusFlash extends BaseActivity {
 
+    //PUBLIC
+
     private EditText bonusQuizTitle, bonusQuizDescription;
     private LinearLayout bonusQaContainer;
     private Vibrator vibrator;

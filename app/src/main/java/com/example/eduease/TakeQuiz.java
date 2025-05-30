@@ -8,7 +8,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
+import android.widget.ProgressBar; // Still needed for show/hideLoading
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
@@ -21,8 +21,6 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.google.firebase.FirebaseApp;
-import com.google.firebase.FirebaseOptions;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -32,16 +30,15 @@ import com.google.firebase.database.ValueEventListener;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects; // Added for Objects.requireNonNull
 
 public class TakeQuiz extends BaseActivity {
 
     private LinearLayout qaContainer;
     private List<Map<String, Object>> questionsList;
-
     private String quizId;
-
-    private String title;
-    private DatabaseReference localQuizzesRef;
+    private TextView titleTextView;
+    // Removed private String title; as it's not needed as a field
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,63 +53,75 @@ public class TakeQuiz extends BaseActivity {
         });
 
         qaContainer = findViewById(R.id.qa_container);
-
+        titleTextView = findViewById(R.id.quiz_title); // Initialize titleTextView here
 
         showLoading();
 
-        FirebaseApp secondaryApp;
-        try {
-            secondaryApp = FirebaseApp.getInstance("Secondary");
-        } catch (IllegalStateException e) {
-            FirebaseOptions options = new FirebaseOptions.Builder()
-                    .setApplicationId("1:882141634417:android:ac69b51d83d01def3460d0")
-                    .setApiKey("AIzaSyBlECTZf28SbEc4xHsz7JnH99YtTw6T58I")
-                    .setProjectId("edu-ease-ni-ayan")
-                    .setDatabaseUrl("https://edu-ease-ni-ayan-default-rtdb.firebaseio.com/")
-                    .build();
-            secondaryApp = FirebaseApp.initializeApp(getApplicationContext(), options, "Secondary");
-        }
-
-        FirebaseDatabase secondaryDatabase = FirebaseDatabase.getInstance(secondaryApp);
-        localQuizzesRef = secondaryDatabase.getReference("local_quizzes");
+        // FirebaseApp.initializeApp(this); // Generally done in Application class or once per app lifecycle
+        // No need for secondaryDatabase if you're using the default instance
+        // localQuizzesRef = FirebaseDatabase.getInstance().getReference("local_quizzes"); // Not directly used here, can be local
 
         quizId = getIntent().getStringExtra("QUIZ_ID");
-        if (quizId != null) {
+        if (quizId != null && !quizId.isEmpty()) { // Added isEmpty check
             questionsList = new ArrayList<>();
             loadQuizDataFromRealtimeDB(quizId);
-
         } else {
             Toast.makeText(this, "Quiz ID not provided.", Toast.LENGTH_SHORT).show();
             hideLoading();
             finish();
         }
 
-        TextView titleTextView = findViewById(R.id.quiz_title);
-        String title = getIntent().getStringExtra("QUIZ_TITLE"); // use "quizTitle", not "QUIZ_TITLE"
-        if (title != null) {
-            titleTextView.setText(title);
-        }
-
-
         Button submitButton = findViewById(R.id.submit_btn);
         submitButton.setOnClickListener(v -> handleSubmit());
     }
 
+    /**
+     * Loads quiz data (title and questions) from Firebase Realtime Database.
+     * @param quizId The ID of the quiz to load.
+     */
     private void loadQuizDataFromRealtimeDB(String quizId) {
         DatabaseReference quizRef = FirebaseDatabase.getInstance().getReference("local_quizzes").child(quizId);
         quizRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
+                // Fetch and set the quiz title
+                String quizTitle = snapshot.child("title").getValue(String.class);
+                if (quizTitle != null) {
+                    titleTextView.setText(quizTitle);
+                } else {
+                    titleTextView.setText("Unknown Quiz"); // Default if title is missing
+                }
+
+                qaContainer.removeAllViews(); // Clear any existing views before populating
+                questionsList.clear(); // Clear list for fresh data
+
                 int questionNumber = 1;
 
+                // Load Multiple Choice questions
                 DataSnapshot mcSnapshot = snapshot.child("multiple_choice");
                 for (DataSnapshot item : mcSnapshot.getChildren()) {
                     Object raw = item.getValue();
                     if (raw instanceof Map) {
-                        addQuestionBlock(questionNumber++, (Map<String, Object>) raw, "multiple_choice");
+                        Map<String, Object> questionMap = (Map<String, Object>) raw;
+                        // Ensure 'choices' is treated as a List<String> or handle potential null
+                        Object choicesObj = questionMap.get("choices");
+                        if (choicesObj instanceof List) {
+                            // Firebase often stores lists as ArrayList<Object>, so cast safely
+                            List<String> choices = new ArrayList<>();
+                            for (Object choiceItem : (List<?>) choicesObj) {
+                                if (choiceItem instanceof String) {
+                                    choices.add((String) choiceItem);
+                                }
+                            }
+                            questionMap.put("choices", choices); // Update the map with correct type
+                        } else {
+                            questionMap.put("choices", new ArrayList<String>()); // Default to empty list
+                        }
+                        addQuestionBlock(questionNumber++, questionMap, "multiple_choice");
                     }
                 }
 
+                // Load Identification questions
                 DataSnapshot idSnapshot = snapshot.child("identification");
                 for (DataSnapshot item : idSnapshot.getChildren()) {
                     Object raw = item.getValue();
@@ -121,6 +130,7 @@ public class TakeQuiz extends BaseActivity {
                     }
                 }
 
+                // Load True or False questions
                 DataSnapshot tfSnapshot = snapshot.child("true_or_false");
                 for (DataSnapshot item : tfSnapshot.getChildren()) {
                     Object raw = item.getValue();
@@ -129,26 +139,32 @@ public class TakeQuiz extends BaseActivity {
                     }
                 }
 
-                // ✅ Hide loading once done
+                // Hide loading once all data is processed and UI is built
                 hideLoading();
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                Toast.makeText(TakeQuiz.this, "Failed to load quiz.", Toast.LENGTH_SHORT).show();
-                hideLoading(); // Also hide on error
+                Toast.makeText(TakeQuiz.this, "Failed to load quiz: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+                hideLoading(); // Also hide loading on error
             }
         });
     }
 
-
-
+    /**
+     * Dynamically adds a question block to the UI.
+     * @param questionNumber The sequential number of the question.
+     * @param questionData   A Map containing the question details (question, answer, choices, etc.).
+     * @param type           The type of the question ("multiple_choice", "true_or_false", "identification").
+     */
+    @SuppressLint("SetTextI18n") // For "#" + questionNumber + " Question:"
     private void addQuestionBlock(int questionNumber, Map<String, Object> questionData, String type) {
         LayoutInflater inflater = LayoutInflater.from(this);
+        // Using `qaContainer` as the root for inflation is correct as it's the parent where views will be added
         View qaBlock = inflater.inflate(R.layout.ayan_take_quiz_edittext, qaContainer, false);
 
         TextView questionNumberView = qaBlock.findViewById(R.id.question_number);
-        EditText questionField = qaBlock.findViewById(R.id.question_field);
+        TextView questionField = qaBlock.findViewById(R.id.question_field); // Changed to TextView as it's not editable
         EditText answerField = qaBlock.findViewById(R.id.answer_field);
         RadioGroup choicesGroup = qaBlock.findViewById(R.id.choices_group);
         RadioButton choiceA = qaBlock.findViewById(R.id.choice_a);
@@ -157,48 +173,36 @@ public class TakeQuiz extends BaseActivity {
         RadioButton choiceD = qaBlock.findViewById(R.id.choice_d);
 
         questionNumberView.setText("#" + questionNumber + " Question:");
-        questionField.setText((String) questionData.get("question"));
+        // Use Objects.requireNonNull for clarity, assuming "question" key exists
+        questionField.setText(Objects.requireNonNull((String) questionData.get("question")));
+
+        // Set initial visibility for all choice RadioButtons to GONE
+        choiceA.setVisibility(View.GONE);
+        choiceB.setVisibility(View.GONE);
+        choiceC.setVisibility(View.GONE);
+        choiceD.setVisibility(View.GONE);
 
         switch (type) {
             case "multiple_choice":
                 answerField.setVisibility(View.GONE);
                 choicesGroup.setVisibility(View.VISIBLE);
 
-                choiceA.setVisibility(View.VISIBLE);
-                choiceB.setVisibility(View.VISIBLE);
-                choiceC.setVisibility(View.VISIBLE);
-                choiceD.setVisibility(View.VISIBLE);
-
+                // Safely cast and use choices list
                 List<String> choices = (List<String>) questionData.get("choices");
 
-                choiceA.setVisibility(View.GONE);
-                choiceB.setVisibility(View.GONE);
-                choiceC.setVisibility(View.GONE);
-                choiceD.setVisibility(View.GONE);
-
                 if (choices != null) {
-                    int size = Math.min(choices.size(), 4);
-                    if (size > 0) {
-                        choiceA.setText(choices.get(0));
-                        choiceA.setVisibility(View.VISIBLE);
-                    }
-                    if (size > 1) {
-                        choiceB.setText(choices.get(1));
-                        choiceB.setVisibility(View.VISIBLE);
-                    }
-                    if (size > 2) {
-                        choiceC.setText(choices.get(2));
-                        choiceC.setVisibility(View.VISIBLE);
-                    }
-                    if (size > 3) {
-                        choiceD.setText(choices.get(3));
-                        choiceD.setVisibility(View.VISIBLE);
+                    // Using an array of RadioButtons for cleaner iteration
+                    RadioButton[] mcChoices = {choiceA, choiceB, choiceC, choiceD};
+                    for (int i = 0; i < mcChoices.length; i++) {
+                        if (i < choices.size()) {
+                            mcChoices[i].setText(choices.get(i));
+                            mcChoices[i].setVisibility(View.VISIBLE);
+                        } else {
+                            mcChoices[i].setVisibility(View.GONE); // Hide unused radio buttons
+                        }
                     }
                 }
-
                 break;
-
-
 
             case "true_or_false":
                 answerField.setVisibility(View.GONE);
@@ -206,11 +210,10 @@ public class TakeQuiz extends BaseActivity {
 
                 choiceA.setText("True");
                 choiceB.setText("False");
-
-                choiceC.setVisibility(View.GONE);
-                choiceD.setVisibility(View.GONE);
+                choiceA.setVisibility(View.VISIBLE); // Make True/False visible
+                choiceB.setVisibility(View.VISIBLE); // Make True/False visible
+                // C and D remain GONE as set initially
                 break;
-
 
             case "identification":
                 answerField.setVisibility(View.VISIBLE);
@@ -218,50 +221,58 @@ public class TakeQuiz extends BaseActivity {
                 break;
         }
 
-        questionData.put("type", type); // Store the type
-        questionsList.add(questionData);
-        // Add to list for scoring
+        // Store the type in the questionData map itself for easier retrieval during scoring
+        // This is important because the 'type' string passed here isn't stored in 'questionsList' otherwise
+        questionData.put("type", type);
+        questionsList.add(questionData); // Add to list for scoring
 
-        qaBlock.setTag(questionData);
+        qaBlock.setTag(questionData); // Store the entire question data map as a tag for easy retrieval
         qaContainer.addView(qaBlock);
     }
 
-
+    /**
+     * Handles the quiz submission process, including validation and score calculation.
+     */
     private void handleSubmit() {
+        showLoading(); // Show loading while processing submission
 
-        showLoading();
         boolean allAnswered = true;
-
         for (int i = 0; i < qaContainer.getChildCount(); i++) {
             View child = qaContainer.getChildAt(i);
-            EditText answerField = child.findViewById(R.id.answer_field);
-            if (answerField.getVisibility() == View.VISIBLE && answerField.getText().toString().trim().isEmpty()) {
-                allAnswered = false;
+            Map<String, Object> questionData = (Map<String, Object>) child.getTag(); // Retrieve stored data
+            String type = (String) questionData.get("type"); // Get type from stored data
 
-                hideLoading();
-                break;
-            }
-
-            RadioGroup choicesGroup = child.findViewById(R.id.choices_group);
-            if (choicesGroup.getVisibility() == View.VISIBLE && choicesGroup.getCheckedRadioButtonId() == -1) {
-                allAnswered = false;
-                hideLoading();
-                break;
+            if ("identification".equals(type)) {
+                EditText answerField = child.findViewById(R.id.answer_field);
+                if (answerField.getText().toString().trim().isEmpty()) {
+                    allAnswered = false;
+                    break;
+                }
+            } else if ("multiple_choice".equals(type) || "true_or_false".equals(type)) {
+                RadioGroup choicesGroup = child.findViewById(R.id.choices_group);
+                if (choicesGroup.getCheckedRadioButtonId() == -1) {
+                    allAnswered = false;
+                    break;
+                }
             }
         }
 
         if (!allAnswered) {
+            hideLoading(); // Hide loading if not all answered and showing dialog
             new AlertDialog.Builder(this)
                     .setTitle("Unanswered Questions")
                     .setMessage("You have unanswered questions. Are you sure you want to submit?")
                     .setPositiveButton("Yes", (dialog, which) -> calculateScore())
-                    .setNegativeButton("No", null)
+                    .setNegativeButton("No", (dialog, which) -> hideLoading()) // Hide loading if cancelled
                     .show();
         } else {
-            calculateScore();
+            calculateScore(); // Proceed to calculate score if all answered
         }
     }
 
+    /**
+     * Calculates the quiz score and prepares data for the QuizResult activity.
+     */
     private void calculateScore() {
         ArrayList<String> userAnswers = new ArrayList<>();
 
@@ -269,11 +280,14 @@ public class TakeQuiz extends BaseActivity {
             View child = qaContainer.getChildAt(i);
             Object tag = child.getTag();
 
-            // Ensure tag is a valid map
-            if (!(tag instanceof Map)) continue;
+            // Ensure tag is a valid map (it should always be after addQuestionBlock)
+            if (!(tag instanceof Map)) {
+                userAnswers.add(""); // Add empty answer if data is corrupt
+                continue;
+            }
 
             Map<String, Object> questionData = (Map<String, Object>) tag;
-            String type = (String) questionData.get("type");
+            String type = (String) questionData.get("type"); // Retrieve type from stored data
             String userAnswer = "";
 
             RadioGroup choicesGroup = child.findViewById(R.id.choices_group);
@@ -288,22 +302,21 @@ public class TakeQuiz extends BaseActivity {
                     }
                 }
             } else if ("identification".equals(type)) {
-                if (answerField.getVisibility() == View.VISIBLE) {
-                    userAnswer = answerField.getText().toString().trim();
-                }
+                // For identification, always use the EditText
+                userAnswer = answerField.getText().toString().trim();
             }
 
             userAnswers.add(userAnswer);
         }
 
+        // Store data in a singleton or static holder to pass to the next activity
         QuizDataHolder.setQuestionsList(questionsList);
         QuizDataHolder.setUserAnswers(userAnswers);
 
-        hideLoading();
+        hideLoading(); // Hide loading before starting new activity
 
         Intent intent = new Intent(TakeQuiz.this, QuizResult.class);
         startActivity(intent);
-        finish();
+        finish(); // Finish this activity so user can't navigate back to it
     }
-
 }

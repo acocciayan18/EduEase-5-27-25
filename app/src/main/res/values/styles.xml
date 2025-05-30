@@ -1,11 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="CustomAlertDialog" parent="ThemeOverlay.AppCompat.Dialog.Alert">
-        <item name="android:background">"#ffffff"</item>
-        <item name="android:textColor">@color/white</item>
-        <item name="android:windowMinWidthMajor">80%</item>
-        <item name="android:windowMinWidthMinor">80%</item>
+<!--    <style name="CustomAlertDialog" parent="ThemeOverlay.AppCompat.Dialog.Alert">-->
+<!--        <item name="android:background">"#ffffff"</item>-->
+<!--        <item name="android:textColor">@color/white</item>-->
+<!--        <item name="android:windowMinWidthMajor">80%</item>-->
+<!--        <item name="android:windowMinWidthMinor">80%</item>-->
+<!--    </style>-->
+
+    <style name="CustomAlertDialog" parent="Theme.MaterialComponents.DayNight.Dialog.Alert">
+        <!-- Optional customizations -->
+        <item name="android:textColorPrimary">#000000</item>
+        <item name="android:fontFamily">@font/poppinsmedium</item>
+        <item name="android:background">?android:attr/selectableItemBackground</item>
     </style>
+
+
+
 
 </resources>
